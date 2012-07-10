@@ -1,0 +1,17 @@
+The files in this folder are QC programs I am writing to assist in the QC of transit on-board surveys.
+
+1. DesireLines.py
+    This program creates desire lines going from Origin -> Board and Alight -> Destination.  Required Inputs
+    are the geodatabase (only personal geodatabases and file geodatabases are supported at this time), the 
+    fields for the survey sample ID, coordinates, and mode.  The outputs are two feature classes in the 
+    geodatabase that have the attributes of the sample id, mode, and straightline distance.  It is imperative
+    that the projection of your data matches the distance you want (e.g. if you want feet as your distance, use
+    State Plane FEET).
+    
+    
+    
+Author: Andrew Rohne, OKI Regional Council, arohne@oki.org
+Date: 2012-07-10
+License: GPLv3
+Language: Python
+Keywords: Transit, survey
