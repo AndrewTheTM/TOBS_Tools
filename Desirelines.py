@@ -7,14 +7,16 @@
 from Tkinter import *
 from ttk import Combobox
 import tkFileDialog, tkMessageBox
-import arcpy, sys, os
+import arcpy, sys, os, math
 from arcpy import env
 
 class App:
     def __init__(self,master):
-        #root.tk.call('wm','iconbitmap',self._w,'-default','iconfile.ico')
-        #for above: http://www.jamesstroud.com/jamess-miscellaneous-how-tos/icons/creating-windows-icons
-        #and http://www.jamesstroud.com/jamess-miscellaneous-how-tos/icons/tkinter-title-bar-icon
+        #User Interface
+        #TODO: Add progressbar so people know when the program is working
+        root.title('Transit Survey Desire Lines')
+        root.iconbitmap(default='busicon.ico')
+        
         self.titleText=Label(master,text="OKI Transit On-board Survey Processor").grid(row=0,column=0,columnspan=4)
         self.licenseText=Label(master,text="Licensed 2012 GPL v3").grid(row=1,column=0,columnspan=4)
         self.websiteText=Label(master,text="www.oki.org").grid(row=2,column=0,columnspan=4)
@@ -33,63 +35,81 @@ class App:
         self.idCombo=Combobox(master,values=["None yet"])
         self.idCombo.grid(row=4,column=3)
         
-        self.oxLabel=Label(master,text="Origin X Field:").grid(row=5, column=0)
+        self.modeToLabel=Label(master,text="Mode To:").grid(row=5,column=0)
+        self.modeToCombo=Combobox(master,values=["None yet"])
+        self.modeToCombo.grid(row=5,column=1)
+        self.modeFrLabel=Label(master,text="Mode From:").grid(row=5, column=2)
+        self.modeFrCombo=Combobox(master,values=["None yet"])
+        self.modeFrCombo.grid(row=5,column=3)
+        
+        self.oxLabel=Label(master,text="Origin X Field:").grid(row=6, column=0)
         self.oxCombo=Combobox(master,values=["None yet"])
-        self.oxCombo.grid(row=5, column=1)
-        self.oyLabel=Label(master,text="Origin Y Field:").grid(row=5, column=2)
+        self.oxCombo.grid(row=6, column=1)
+        self.oyLabel=Label(master,text="Origin Y Field:").grid(row=6, column=2)
         self.oyCombo=Combobox(master,values=["None yet"])
-        self.oyCombo.grid(row=5,column=3)
+        self.oyCombo.grid(row=6,column=3)
         
-        self.bxLabel=Label(master,text="Board X Field:").grid(row=6, column=0)
+        self.bxLabel=Label(master,text="Board X Field:").grid(row=7, column=0)
         self.bxCombo=Combobox(master,values=["None yet"])
-        self.bxCombo.grid(row=6, column=1)
-        self.byLabel=Label(master,text="Board Y Field:").grid(row=6, column=2)
+        self.bxCombo.grid(row=7, column=1)
+        self.byLabel=Label(master,text="Board Y Field:").grid(row=7, column=2)
         self.byCombo=Combobox(master,values=["None yet"])
-        self.byCombo.grid(row=6,column=3)
+        self.byCombo.grid(row=7,column=3)
         
-        self.axLabel=Label(master,text="Alight X Field:").grid(row=7, column=0)
+        self.axLabel=Label(master,text="Alight X Field:").grid(row=8, column=0)
         self.axCombo=Combobox(master,values=["None yet"])
-        self.axCombo.grid(row=7, column=1)
-        self.ayLabel=Label(master,text="Alight Y Field:").grid(row=7, column=2)
+        self.axCombo.grid(row=8, column=1)
+        self.ayLabel=Label(master,text="Alight Y Field:").grid(row=8, column=2)
         self.ayCombo=Combobox(master,values=["None yet"])
-        self.ayCombo.grid(row=7,column=3)
+        self.ayCombo.grid(row=8,column=3)
         
-        self.dxLabel=Label(master,text="Dest X Field:").grid(row=8, column=0)
+        self.dxLabel=Label(master,text="Dest X Field:").grid(row=9, column=0)
         self.dxCombo=Combobox(master,values=["None yet"])
-        self.dxCombo.grid(row=8, column=1)
-        self.dyLabel=Label(master,text="Dest Y Field:").grid(row=8, column=2)
+        self.dxCombo.grid(row=9, column=1)
+        self.dyLabel=Label(master,text="Dest Y Field:").grid(row=9, column=2)
         self.dyCombo=Combobox(master,values=["None yet"])
-        self.dyCombo.grid(row=8,column=3)
+        self.dyCombo.grid(row=9,column=3)
         
-        self.goButton=Button(master,text="Go!",command=self.say_hi).grid(row=9,column=0)
-        self.quitButton=Button(master,text="Quit",command=master.quit).grid(row=9,column=1)
+        self.breakerLabel=Label(master,text="The below are for graphing and are not needed for Desirelines").grid(row=10,column=0,columnspan=4)
         
-    def say_hi(self):
-        print "Do or do not.  There is no try"
+        self.surveyBusLabel=Label(master,text="Survey Bus:").grid(row=11,column=0)
+        self.surveyBusCombo=Combobox(master,values=["None yet"])
+        self.surveyBusCombo.grid(row=11,column=1)
+        self.firstBusLabel=Label(master,text="First Bus:").grid(row=11,column=2)
+        self.firstBusCombo=Combobox(master,values=["None yet"])
+        self.firstBusCombo.grid(row=11,column=3)
+        
+        self.goButton=Button(master,text="Create Desirelines!",command=self.buildDL).grid(row=12,column=0)
+        self.quitButton=Button(master,text="Quit",command=master.quit).grid(row=12,column=1)
+        self.graphOB=Button(master,text="Graph OB",command=self.graphOB).grid(row=12,column=2)
+        self.graphAD=Button(master,text="Graph AD",command=self.graphAD).grid(row=12,column=3)
         
     def loadTemplate(self):
+        #Loads a personal geodatabase file
         filename=tkFileDialog.askopenfilename(filetypes=(("Personal Geodatabases","*.mdb")))
         if(filename):
             try:
                 self.workspaceText.insert(END,filename)
                 env.workspace=filename
                 
-            except:
-                tkMessageBox.showerror("Failed to read file")
+            except Exception as e:
+                tkMessageBox.showerror("Failed to read file",e.message)
                 return
                 
     def loadFolder(self):
+        #Loads a file geodatabase (looks like a folder to Windows Explorer, etc.)
         foldername=tkFileDialog.askdirectory()
         if(foldername):
             try:
                 self.workspaceText.insert(END,foldername)
                 env.workspace=foldername
                 self.getTablesFromGdb()
-            except:
-                tkMessageBox.showerror("Failed to read folder")
+            except Exception as e:
+                tkMessageBox.showerror("Failed to read folder",e.message)
                 return
                 
     def getTablesFromGdb(self):
+        #Gets a table list from the geodatabase and fills the table combobox
         self.tableList=arcpy.ListTables()
         tl=()
         for table in self.tableList:
@@ -97,6 +117,7 @@ class App:
         self.tableLB['values']=tl
         
     def getFieldsFromTable(self,something):
+        #Gets the fields from the selected table and loads all (relevant) comboboxes
         featClass=self.tableLB.get()
         try:
             fl=()
@@ -113,10 +134,125 @@ class App:
                 self.dxCombo['values']=fl
                 self.dyCombo['values']=fl
                 self.idCombo['values']=fl
+                self.modeToCombo['values']=fl
+                self.modeFrCombo['values']=fl
+                self.surveyBusCombo['values']=fl
+                self.firstBusCombo['values']=fl
                 
         except:
             return
 
+    def buildDL(self):
+        #this is the main process to build the desire lines
+        try:
+            #Check Inputs
+            if self.idCombo.get() and self.modeToCombo.get() and self.modeFrCombo.get() and self.oxCombo.get() and self.oyCombo.get() and self.bxCombo.get() and self.byCombo.get() and self.axCombo.get() and self.ayCombo.get() and self.dxCombo.get() and self.dyCombo.get():
+                SurveyIDField=self.idCombo.get()
+                ModeToField=self.modeToCombo.get()
+                ModeFrField=self.modeFrCombo.get()
+                OXField=self.oxCombo.get()
+                OYField=self.oyCombo.get()
+                BXField=self.bxCombo.get()
+                BYField=self.byCombo.get()
+                AXField=self.axCombo.get()
+                AYField=self.ayCombo.get()
+                DXField=self.dxCombo.get()
+                DYField=self.dyCombo.get()
+                
+                #Origin ~> Boarding 
+                OutputFC="OBDesireLines"
+                arcpy.CreateFeatureclass_management(env.workspace,OutputFC,"POLYLINE")
+                arcpy.AddField_management(OutputFC,"SurveyID","LONG")
+                arcpy.AddField_management(OutputFC,"ModeTo","LONG")
+                arcpy.AddField_management(OutputFC,"ModeFrom","LONG")
+                arcpy.AddField_management(OutputFC,"DistanceSL","DOUBLE")
+                rows=arcpy.SearchCursor(self.tableLB.get())
+                insRows=arcpy.InsertCursor(OutputFC)
+                x=1
+                for row in rows:
+                    if(x % 100 == 0):
+                        print "Working on ",x
+                    insRow=insRows.newRow()
+                    insRow.SurveyID=row.getValue(SurveyIDField)
+                    insRow.ModeTo=row.getValue(ModeToField)
+                    insRow.ModeFrom=row.getValue(ModeFrField)
+                    lineArray=arcpy.Array()
+                    pnt1=arcpy.Point()
+                    pnt2=arcpy.Point()
+                    if(row.getValue(OXField) and row.getValue(OYField) and row.getValue(BXField) and row.getValue(BYField)):
+                        pnt1.X=row.getValue(OXField)
+                        pnt1.Y=row.getValue(OYField)
+                        lineArray.add(pnt1)
+                        pnt2.X=row.getValue(BXField)
+                        pnt2.Y=row.getValue(BYField)
+                        lineArray.add(pnt2)
+                        insRow.shape=lineArray
+                        insRow.DistanceSL=math.sqrt(math.pow(pnt2.X-pnt1.X,2)+math.pow(pnt2.Y-pnt1.Y,2))
+                    
+                    insRows.insertRow(insRow)
+                    x+=1
+                    
+                #Alight ~> Destination
+                OutputFC="ADDesireLines"
+                arcpy.CreateFeatureclass_management(env.workspace,OutputFC,"POLYLINE")
+                arcpy.AddField_management(OutputFC,"SurveyID","LONG")
+                arcpy.AddField_management(OutputFC,"ModeTo","LONG")
+                arcpy.AddField_management(OutputFC,"ModeFrom","LONG")
+                arcpy.AddField_management(OutputFC,"DistanceSL","DOUBLE")
+                rows=arcpy.SearchCursor(self.tableLB.get())
+                insRows=arcpy.InsertCursor(OutputFC)
+                x=1
+                for row in rows:
+                    if(x % 100 == 0):
+                        print "Working on ",x
+                    insRow=insRows.newRow()
+                    insRow.SurveyID=row.getValue(SurveyIDField)
+                    insRow.ModeTo=row.getValue(ModeToField)
+                    insRow.ModeFrom=row.getValue(ModeFrField)
+                    lineArray=arcpy.Array()
+                    pnt1=arcpy.Point()
+                    pnt2=arcpy.Point()
+                    if(row.getValue(AXField) and row.getValue(AYField) and row.getValue(DXField) and row.getValue(DYField)):
+                        pnt1.X=row.getValue(AXField)
+                        pnt1.Y=row.getValue(AYField)
+                        lineArray.add(pnt1)
+                        pnt2.X=row.getValue(DXField)
+                        pnt2.Y=row.getValue(DYField)
+                        lineArray.add(pnt2)
+                        insRow.shape=lineArray
+                        insRow.DistanceSL=math.sqrt(math.pow(pnt2.X-pnt1.X,2)+math.pow(pnt2.Y-pnt1.Y,2))
+                    
+                    insRows.insertRow(insRow)
+                    x+=1
+                    
+                #TODO: add something about progress
+            else:
+                tkMessageBox.showerror("Error Creating Featureclass","You need to select a field for ALL input boxes!")
+        except Exception as e:
+            tkMessageBox.showerror("Error Creating Featureclass",e.message)
+            
+    def graphOB(self):
+        #Graphs Origin-Boarding Locations
+        try:
+            #Check Inputs
+            if self.idCombo.get() and self.modeToCombo.get() and self.modeFrCombo.get() and self.oxCombo.get() and self.oyCombo.get() and self.bxCombo.get() and self.byCombo.get() and self.axCombo.get() and self.ayCombo.get() and self.dxCombo.get() and self.dyCombo.get() and self.surveyBusCombo.get() and self.firstBusCombo.get():
+                SurveyIDField=self.idCombo.get()
+                ModeToField=self.modeToCombo.get()
+                ModeFrField=self.modeFrCombo.get()
+                OXField=self.oxCombo.get()
+                OYField=self.oyCombo.get()
+                BXField=self.bxCombo.get()
+                BYField=self.byCombo.get()
+                AXField=self.axCombo.get()
+                AYField=self.ayCombo.get()
+                DXField=self.dxCombo.get()
+                DYField=self.dyCombo.get()
+                sBusField=self.surveyBusCombo.get()
+                fBusField=self.firstBusCombo.get()
+                #read all this stuff into an array
+                
+                
+            
 root=Tk()
 app=App(root)
 root.mainloop()
