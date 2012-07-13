@@ -235,23 +235,114 @@ class App:
         #Graphs Origin-Boarding Locations
         try:
             #Check Inputs
-            if self.idCombo.get() and self.modeToCombo.get() and self.modeFrCombo.get() and self.oxCombo.get() and self.oyCombo.get() and self.bxCombo.get() and self.byCombo.get() and self.axCombo.get() and self.ayCombo.get() and self.dxCombo.get() and self.dyCombo.get() and self.surveyBusCombo.get() and self.firstBusCombo.get():
-                SurveyIDField=self.idCombo.get()
-                ModeToField=self.modeToCombo.get()
-                ModeFrField=self.modeFrCombo.get()
-                OXField=self.oxCombo.get()
-                OYField=self.oyCombo.get()
-                BXField=self.bxCombo.get()
-                BYField=self.byCombo.get()
-                AXField=self.axCombo.get()
-                AYField=self.ayCombo.get()
-                DXField=self.dxCombo.get()
-                DYField=self.dyCombo.get()
-                sBusField=self.surveyBusCombo.get()
-                fBusField=self.firstBusCombo.get()
+            if 1==1: 
+                #self.modeToCombo.get() and self.oxCombo.get() and self.oyCombo.get() and self.bxCombo.get() and self.byCombo.get() and self.surveyBusCombo.get() and self.firstBusCombo.get():
+                ###Not needed
+                #SurveyIDField=self.idCombo.get()
+                #ModeFrField=self.modeFrCombo.get()
+                #AXField=self.axCombo.get()
+                #AYField=self.ayCombo.get()
+                #DXField=self.dxCombo.get()
+                #DYField=self.dyCombo.get()
+                
+                ## Debugging
+                ##ModeToField=self.modeToCombo.get()
+                ModeToField="OGET"
+                ##OXField=self.oxCombo.get()
+                OXField="OXCORD"
+                ##OYField=self.oyCombo.get()
+                OYField="OYCORD"
+                ##BXField=self.bxCombo.get()
+                BXField="BX"
+                ##BYField=self.byCombo.get()
+                BYField="BY_"
+                ##sBusField=self.surveyBusCombo.get()
+                sBusField="RTCODE"
+                ##fBusField=self.firstBusCombo.get()
+                fBusField="BUS1"
                 #read all this stuff into an array
+                rows=arcpy.SearchCursor(self.tableLB.get())
+                x=1
+                rowData=[]
+                for row in rows:
+                    if(x % 100 == 0):
+                        print "Reading on ",x
+                    if(row.getValue(sBusField)==row.getValue(fBusField)):
+                        #iRow=[][] #mode, distance
+                        if(row.getValue(OXField)>0 and row.getValue(BXField)>0 and row.getValue(OYField)>0 and row.getValue(BYField)>0):
+                            iRow=[row.getValue(ModeToField),math.sqrt(math.pow(row.getValue(OXField)-row.getValue(BXField),2)+math.pow(row.getValue(OYField)-row.getValue(BYField),2))/5280]
+                            rowData.append(iRow)
+                fbefore=open('C:\\temp\\beforesort.txt','w')
+                for item in rowData:
+                    fbefore.write(str(item[1]))
+                    fbefore.write('\n')
+                fbefore.close()
+                newRowData=self.sortList(rowData)
+                fafter=open('C:\\temp\\aftersort.txt','w')
+                for item in newRowData:
+                    fafter.write(str(item[1]))
+                    fafter.write('\n')
+                fafter.close()
+                
+                print "DBG: graph creation"
                 
                 
+                print "Completed for now"
+
+        except Exception as e:
+            tkMessageBox.showerror("Problem somewhere",e.message)
+    
+    def graphAD(self):
+        print "This is not the subroutine you are looking for"
+        #if self.idCombo.get() and self.modeToCombo.get() and self.modeFrCombo.get() and self.oxCombo.get() and self.oyCombo.get() and self.bxCombo.get() and self.byCombo.get() and self.axCombo.get() and self.ayCombo.get() and self.dxCombo.get() and self.dyCombo.get() and self.surveyBusCombo.get() and self.firstBusCombo.get():
+                        
+    def sortList(self,list):
+        print "Sorting..."
+        recs=len(list)
+        outputlist=[]
+        currentlowest=[]
+        while len(outputlist)<recs:
+            for item in list:
+                if(currentlowest==[]):
+                    currentlowest=item
+                for itemcompare in list:
+                    if(itemcompare[1]<item[1]):
+                        item=itemcompare
+                #At this point, item should be the smallest distance in list
+                outputlist.append(item)
+                list.remove(item)
+        print "Sorting complete..."
+        return outputlist
+                
+                
+        
+        
+        ### This was the initial sort method.  It is SLOW ###
+        #performs a bubble sort on the distance field maintaining the mode
+        #outputlist=[]
+        #spass=1
+        #keepgoing=1
+        #while keepgoing>0:
+        #    print "DBG: Sorting pass ",spass
+        #    spass+=1
+        #    switched=0
+        #    for tmp1 in list:
+        #        a=list.index(tmp1)
+        #        if(a<len(list)-1):
+        #            tmp2=list[a+1]
+        #            if(tmp1[1]<tmp2[1]):
+        #                list.remove(tmp1)
+        #                outputlist.append(tmp1)
+        #                switched+=1
+        #            else:
+        #                list.remove(tmp2)
+        #                outputlist.append(tmp2)
+        #    if(switched==0):
+        #        keepgoing=0
+        #            
+        #    list=outputlist
+        #return list
+        
             
 root=Tk()
 app=App(root)

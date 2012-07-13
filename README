@@ -8,6 +8,12 @@ The files in this folder are QC programs I am writing to assist in the QC of tra
     that the coordinates of your data matches the distance you want (e.g. if you want feet as your distance, your
     input X and Y coordinates should relate to a projection like NAD83 State Plane - Feet).
     
+    A. Graph OB and Graph AD Buttons:
+        These buttons will graph the distance by mode for origin-boarding and alighting-destination IF the bus
+        
+    
+ 
+    
     
     
 Author: Andrew Rohne, OKI Regional Council, arohne@oki.org
