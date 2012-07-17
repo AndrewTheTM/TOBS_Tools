@@ -6,8 +6,8 @@
 
 from Tkinter import *
 from ttk import Combobox
-import tkFileDialog, tkMessageBox
-import arcpy, sys, os, math
+import tkFileDialog, tkMessageBox, cairoplot
+import arcpy, sys, os, math, ctypes
 from arcpy import env
 
 class App:
@@ -83,6 +83,9 @@ class App:
         self.quitButton=Button(master,text="Quit",command=master.quit).grid(row=12,column=1)
         self.graphOB=Button(master,text="Graph OB",command=self.graphOB).grid(row=12,column=2)
         self.graphAD=Button(master,text="Graph AD",command=self.graphAD).grid(row=12,column=3)
+        
+        self.addQCVarsButton=Button(master,text="Add QC Variables",command=self.QCVars).grid(row=13,column=0)
+        self.CupholderButton=Button(master,text="Cupholder!",command=self.cupholder).grid(row=13,column=3)
         
     def loadTemplate(self):
         #Loads a personal geodatabase file
@@ -268,23 +271,54 @@ class App:
                     if(x % 100 == 0):
                         print "Reading on ",x
                     if(row.getValue(sBusField)==row.getValue(fBusField)):
-                        #iRow=[][] #mode, distance
                         if(row.getValue(OXField)>0 and row.getValue(BXField)>0 and row.getValue(OYField)>0 and row.getValue(BYField)>0):
                             iRow=[row.getValue(ModeToField),math.sqrt(math.pow(row.getValue(OXField)-row.getValue(BXField),2)+math.pow(row.getValue(OYField)-row.getValue(BYField),2))/5280]
                             rowData.append(iRow)
-                fbefore=open('C:\\temp\\beforesort.txt','w')
-                for item in rowData:
-                    fbefore.write(str(item[1]))
-                    fbefore.write('\n')
-                fbefore.close()
                 newRowData=self.sortList(rowData)
-                fafter=open('C:\\temp\\aftersort.txt','w')
+                #Graph creation
+                iWalk=0
+                iBike=0
+                iDrive=0
+                graphItemsWalk=[]
+                graphItemsBike=[]
+                graphItemsDrive=[]
+                    
                 for item in newRowData:
-                    fafter.write(str(item[1]))
-                    fafter.write('\n')
-                fafter.close()
+                    if(item[0]==1):
+                        graphItemsWalk.append((iWalk,item[1]))
+                        iWalk+=1
+                    elif(item[0]==2):
+                        graphItemsBike.append((iBike,item[1]))
+                        iBike+=1
+                    else:
+                        graphItemsDrive.append((iDrive,item[1]))
+                        iDrive+=1
+                if(iWalk==0):
+                    graphItemsWalk.append((0,0))
+                if(iBike==0):
+                    graphItemsBike.append((0,0))
+                if(iDrive==0):
+                    graphItemsDrive.append((0,0))
+                        
+                graphItems=[]
+                giWalk=[]
+                giBike=[]
+                giDrive=[]
                 
-                print "DBG: graph creation"
+                for item in graphItemsWalk:
+                    giWalk.append((item[0]*100/iWalk,item[1]))
+                for item in graphItemsBike:
+                    giBike.append((item[0]*100/iBike,item[1]))
+                for item in graphItemsDrive:
+                    giDrive.append((item[0]*100/iDrive,item[1]))
+
+                graphItems.append(giWalk)
+                graphItems.append(giBike)
+                graphItems.append(giDrive)
+                cairoplot.scatter_plot('C:\\GraphO2B.SVG',data=graphItems,width=600,height=400,border=20,axis=True,grid=True,series_colors=[(1,0,0),(0,1,0),(0,0,1)],y_title='Miles')
+                cairoplot.scatter_plot('C:\\GraphO2B_Walk.SVG',data=graphItemsWalk,width=600,height=400,border=20,axis=True,grid=True,series_colors=[(1,0,0)],y_title='Miles')
+                cairoplot.scatter_plot('C:\\GraphO2B_Bike.SVG',data=graphItemsBike,width=600,height=400,border=20,axis=True,grid=True,series_colors=[(1,0,0)],y_title='Miles')
+                cairoplot.scatter_plot('C:\\GraphO2B_Drive.SVG',data=graphItemsDrive,width=600,height=400,border=20,axis=True,grid=True,series_colors=[(1,0,0)],y_title='Miles')
                 
                 
                 print "Completed for now"
@@ -293,11 +327,111 @@ class App:
             tkMessageBox.showerror("Problem somewhere",e.message)
     
     def graphAD(self):
-        print "This is not the subroutine you are looking for"
-        #if self.idCombo.get() and self.modeToCombo.get() and self.modeFrCombo.get() and self.oxCombo.get() and self.oyCombo.get() and self.bxCombo.get() and self.byCombo.get() and self.axCombo.get() and self.ayCombo.get() and self.dxCombo.get() and self.dyCombo.get() and self.surveyBusCombo.get() and self.firstBusCombo.get():
+         #Graphs Origin-Boarding Locations
+        try:
+            #Check Inputs
+            if 1==1: 
+                #self.modeFromCombo.get() and self.oxCombo.get() and self.oyCombo.get() and self.bxCombo.get() and self.byCombo.get() and self.surveyBusCombo.get() and self.firstBusCombo.get():
+                ###Not needed
+                #SurveyIDField=self.idCombo.get()
+                #ModeFrField=self.modeFrCombo.get()
+                #AXField=self.axCombo.get()
+                #AYField=self.ayCombo.get()
+                #DXField=self.dxCombo.get()
+                #DYField=self.dyCombo.get()
+                
+                ## Debugging
+                ##ModeToField=self.modeToCombo.get()
+                ModeFromField="DGET"
+                ##DXField=self.oxCombo.get()
+                DXField="DXCORD"
+                ##OYField=self.oyCombo.get()
+                DYField="DYCORD"
+                ##BXField=self.bxCombo.get()
+                AXField="AX"
+                ##BYField=self.byCombo.get()
+                AYField="AY"
+                ##sBusField=self.surveyBusCombo.get()
+                sBusField="RTCODE"
+                ##fBusField=self.firstBusCombo.get()
+                fBusField="BUS1"
+                #read all this stuff into an array
+                rows=arcpy.SearchCursor(self.tableLB.get())
+                x=1
+                rowData=[]
+                for row in rows:
+                    if(row.getValue("BUS4")):
+                        lastBus=row.getValue("BUS4")
+                    elif(row.getValue("BUS3")):
+                        lastBus=row.getValue("BUS3")
+                    elif(row.getValue("BUS2")):
+                        lastBus=row.getValue("BUS2")
+                    else:
+                        lastBus=row.getValue("BUS1")
+                    if(x % 100 == 0):
+                        print "Reading on ",x
+                    if(row.getValue(sBusField)==lastBus):
+                        if(row.getValue(DXField)>0 and row.getValue(AXField)>0 and row.getValue(DYField)>0 and row.getValue(AYField)>0):
+                            iRow=[row.getValue(ModeFromField),math.sqrt(math.pow(row.getValue(DXField)-row.getValue(AXField),2)+math.pow(row.getValue(DYField)-row.getValue(AYField),2))/5280]
+                            rowData.append(iRow)
+
+                    
                         
+                newRowData=self.sortList(rowData)
+                #Graph creation
+                iWalk=0
+                iBike=0
+                iDrive=0
+                graphItemsWalk=[]
+                graphItemsBike=[]
+                graphItemsDrive=[]
+                    
+                for item in newRowData:
+                    if(item[0]==1):
+                        graphItemsWalk.append((iWalk,item[1]))
+                        iWalk+=1
+                    elif(item[0]==2):
+                        graphItemsBike.append((iBike,item[1]))
+                        iBike+=1
+                    else:
+                        graphItemsDrive.append((iDrive,item[1]))
+                        iDrive+=1
+                        
+                if(iWalk==0):
+                    graphItemsWalk.append((0,0))
+                    iWalk=1
+                if(iBike==0):
+                    graphItemsBike.append((0,0))
+                    iBike=1
+                if(iDrive==0):
+                    graphItemsDrive.append((0,0))
+                    iDrive=1
+                graphItems=[]
+                giWalk=[]
+                giBike=[]
+                giDrive=[]
+                
+                for item in graphItemsWalk:
+                    giWalk.append((item[0]*100/iWalk,item[1]))
+                for item in graphItemsBike:
+                    giBike.append((item[0]*100/iBike,item[1]))
+                for item in graphItemsDrive:
+                    giDrive.append((item[0]*100/iDrive,item[1]))
+
+                graphItems.append(giWalk)
+                graphItems.append(giBike)
+                graphItems.append(giDrive)
+
+                cairoplot.scatter_plot('C:\\GraphA2D.SVG',data=graphItems,width=600,height=400,border=20,axis=True,grid=True,series_colors=[(1,0,0),(0,1,0),(0,0,1)],y_title='Miles')
+                cairoplot.scatter_plot('C:\\GraphA2D_Walk.SVG',data=graphItemsWalk,width=600,height=400,border=20,axis=True,grid=True,series_colors=[(1,0,0)],y_title='Miles')
+                cairoplot.scatter_plot('C:\\GraphA2D_Bike.SVG',data=graphItemsBike,width=600,height=400,border=20,axis=True,grid=True,series_colors=[(1,0,0)],y_title='Miles')
+                cairoplot.scatter_plot('C:\\GraphA2D_Drive.SVG',data=graphItemsDrive,width=600,height=400,border=20,axis=True,grid=True,series_colors=[(1,0,0)],y_title='Miles')
+                
+                print "Completed for now"
+        except Exception as e:
+            tkMessageBox.showerror("Problem somewhere",e.message)
+                
     def sortList(self,list):
-        print "Sorting..."
         recs=len(list)
         outputlist=[]
         currentlowest=[]
@@ -306,42 +440,133 @@ class App:
                 if(currentlowest==[]):
                     currentlowest=item
                 for itemcompare in list:
-                    if(itemcompare[1]<item[1]):
+                    if(itemcompare[1]>item[1]):
                         item=itemcompare
                 #At this point, item should be the smallest distance in list
                 outputlist.append(item)
                 list.remove(item)
-        print "Sorting complete..."
         return outputlist
-                
-                
         
+    def QCVars(self):
+        if(tkMessageBox.askyesno("Modify Table","This WILL modify the input table.  Continue?") and self.tableLB.get()):
+            print "This battlestation will be fully operational"
+            #check for and delete QC fields
+            inputFeatClass=self.tableLB.get()
+            fieldList=arcpy.ListFields(inputFeatClass,"QC_*")
+            for field in fieldList:
+                arcpy.DeleteField_management(inputFeatClass,field.name)
+            arcpy.AddField_management(inputFeatClass,"QC_WalkToDistance","DOUBLE")
+            arcpy.AddField_management(inputFeatClass,"QC_BikeToDistance","DOUBLE")
+            arcpy.AddField_management(inputFeatClass,"QC_DriveToDistance","DOUBLE")
+            arcpy.AddField_management(inputFeatClass,"QC_WalkFromDistance","DOUBLE")
+            arcpy.AddField_management(inputFeatClass,"QC_BikeFromDistance","DOUBLE")
+            arcpy.AddField_management(inputFeatClass,"QC_DriveFromDistance","DOUBLE")
+            arcpy.AddField_management(inputFeatClass,"QC_DriveToLocalRoute","SHORT")
+            arcpy.AddField_management(inputFeatClass,"QC_BoardWrongState","SHORT")
+            arcpy.AddField_management(inputFeatClass,"QC_AlightWrongState","SHORT")
+            
+            #Field Definitions
+            #if(self.modeToCombo.get() and self.oxCombo.get() and self.oyCombo.get() and self.bxCombo.get() and self.byCombo.get() and self.surveyBusCombo.get() and self.firstBusCombo.get():
+            ###Not needed
+            #SurveyIDField=self.idCombo.get()
+            #ModeFrField=self.modeFrCombo.get()
+            #AXField=self.axCombo.get()
+            #AYField=self.ayCombo.get()
+            #DXField=self.dxCombo.get()
+            #DYField=self.dyCombo.get()
+            
+            ## Debugging
+            ##ModeToField=self.modeToCombo.get()
+            ModeToField="OGET"
+            ##OXField=self.oxCombo.get()
+            OXField="OXCORD"
+            ##OYField=self.oyCombo.get()
+            OYField="OYCORD"
+            ##BXField=self.bxCombo.get()
+            BXField="BX"
+            ##BYField=self.byCombo.get()
+            BYField="BY_"
+            ##sBusField=self.surveyBusCombo.get()
+            sBusField="RTCODE"
+            ##fBusField=self.firstBusCombo.get()
+            fBusField="BUS1"
+            #read all this stuff into an array
+            
+            ModeFromField="DGET"
+            ##DXField=self.oxCombo.get()
+            DXField="DXCORD"
+            ##OYField=self.oyCombo.get()
+            DYField="DYCORD"
+            ##BXField=self.bxCombo.get()
+            AXField="AX"
+            ##BYField=self.byCombo.get()
+            AYField="AY"
+            ##sBusField=self.surveyBusCombo.get()
+            
+            rows=arcpy.UpdateCursor(self.tableLB.get())
+            x=1
+            rowData=[]
+            for row in rows:
+                if(x % 100 == 0):
+                    print "Reading on ",x
+                    
+                #ToDistance    
+                if(row.getValue(sBusField)==row.getValue(fBusField)):
+                    if(row.getValue(OXField)>0 and row.getValue(BXField)>0 and row.getValue(OYField)>0 and row.getValue(BYField)>0):
+                        dist=math.sqrt(math.pow(row.getValue(OXField)-row.getValue(BXField),2)+math.pow(row.getValue(OYField)-row.getValue(BYField),2))/5280
+                        if(row.getValue(ModeToField)==1):
+                            row.setValue("QC_WalkToDistance",dist)
+                        elif(row.getValue(ModeToField)==2):
+                            row.setValue("QC_BikeToDistance",dist)
+                        else:
+                            row.setValue("QC_DriveToDistance",dist)
+                    else:
+                        row.setValue("QC_WalkToDistance",-1)
+                        row.setValue("QC_BikeToDistance",-1)
+                        row.setValue("QC_DriveToDistance",-1)
+                
+                #FromDistance
+                if(row.getValue("BUS4")):
+                    lastBus=row.getValue("BUS4")
+                elif(row.getValue("BUS3")):
+                    lastBus=row.getValue("BUS3")
+                elif(row.getValue("BUS2")):
+                    lastBus=row.getValue("BUS2")
+                else:
+                    lastBus=row.getValue("BUS1")
+                    
+                if(row.getValue(sBusField)==lastBus):
+                    if(row.getValue(DXField)>0 and row.getValue(AXField)>0 and row.getValue(DYField)>0 and row.getValue(AYField)>0):
+                        dist=math.sqrt(math.pow(row.getValue(DXField)-row.getValue(AXField),2)+math.pow(row.getValue(DYField)-row.getValue(AYField),2))/5280
+                        if(row.getValue(ModeFromField)==1):
+                            row.setValue("QC_WalkFromDistance",dist)
+                        elif(row.getValue(ModeFromField)==2):
+                            row.setValue("QC_BikeFromDistance",dist)
+                        else:
+                            row.setValue("QC_DriveFromDistance",dist)
+                    else:
+                        row.setValue("QC_WalkFromDistance",-1)
+                        row.setValue("QC_BikeFromDistance",-1)
+                        row.setValue("QC_DriveFromDistance",-1)
+                
+
+                rows.updateRow(row)
+                            
+            
+            
+            print "DBG: Complete for now"
+            
+            
+            
+        elif(self.tableLB.get()==''):
+            tkMessageBox.showerror("Problem","You must select a table to proceed")
+        else:
+            print "Your lack of faith is disturbing"
         
-        ### This was the initial sort method.  It is SLOW ###
-        #performs a bubble sort on the distance field maintaining the mode
-        #outputlist=[]
-        #spass=1
-        #keepgoing=1
-        #while keepgoing>0:
-        #    print "DBG: Sorting pass ",spass
-        #    spass+=1
-        #    switched=0
-        #    for tmp1 in list:
-        #        a=list.index(tmp1)
-        #        if(a<len(list)-1):
-        #            tmp2=list[a+1]
-        #            if(tmp1[1]<tmp2[1]):
-        #                list.remove(tmp1)
-        #                outputlist.append(tmp1)
-        #                switched+=1
-        #            else:
-        #                list.remove(tmp2)
-        #                outputlist.append(tmp2)
-        #    if(switched==0):
-        #        keepgoing=0
-        #            
-        #    list=outputlist
-        #return list
+    def cupholder(self):
+        tkMessageBox.showinfo("Cupholder","Lord Vadar finds your computer's lack of a cupholder disturbing.")
+        ctypes.windll.WINMM.mciSendStringW(u"set cdaudio door open",None,0,None)
+
         
             
 root=Tk()
